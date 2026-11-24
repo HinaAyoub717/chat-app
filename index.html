@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#eef5f1">
+  <title>Ripple — Real-Time Chat</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #edf3ef;
+      --surface: #ffffff;
+      --surface-soft: #f6f9f7;
+      --text: #19352d;
+      --muted: #71827b;
+      --line: #e4ece7;
+      --green: #177e63;
+      --green-dark: #0f654f;
+      --green-soft: #e5f4ed;
+      --shadow: 0 24px 80px rgba(31, 66, 52, 0.13);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 15%, rgba(97, 190, 152, 0.16), transparent 30%),
+        radial-gradient(circle at 90% 85%, rgba(97, 190, 152, 0.12), transparent 28%),
+        var(--bg);
+    }
+
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button, input, textarea { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(23, 126, 99, 0.22);
+      outline-offset: 2px;
+    }
+
+    .app {
+      position: relative;
+      display: flex;
+      width: min(1220px, calc(100% - 48px));
+      height: min(860px, calc(100dvh - 48px));
+      margin: 24px auto;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      flex: 0 0 330px;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--surface-soft);
+      border-right: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      height: 84px;
+      padding: 0 26px;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      color: white;
+      background: var(--green);
+      border-radius: 13px 13px 13px 5px;
+      box-shadow: 0 8px 18px rgba(23, 126, 99, 0.22);
+    }
+
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 23px; font-weight: 750; letter-spacing: -0.8px; }
+    .brand-tag {
+      margin-left: auto;
+      padding: 5px 8px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 0.7px;
+      background: var(--green-soft);
+      border-radius: 20px;
+    }
+
+    .sidebar-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 17px 26px 13px;
+    }
+
+    .sidebar-heading h1 { margin: 0; font-size: 20px; letter-spacing: -0.4px; }
+    .count-badge {
+      display: grid;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 7px;
+      place-items: center;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--green-soft);
+      border-radius: 8px;
+    }
+
+    .sidebar-actions { display: flex; align-items: center; gap: 8px; }
+    .new-chat-button {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 29px;
+      padding: 0 9px;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--green);
+      border: 0;
+      border-radius: 9px;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+    .new-chat-button:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .new-chat-button svg { width: 13px; height: 13px; }
+
+    .search-box {
+      position: relative;
+      margin: 0 22px 20px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      width: 17px;
+      height: 17px;
+      color: #8a9a92;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px 0 41px;
+      color: var(--text);
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .search-box input::placeholder { color: #96a39d; }
+    .search-box input:focus { border-color: #8ac8b2; box-shadow: 0 0 0 4px rgba(23, 126, 99, 0.07); outline: none; }
+
+    .conversation-list {
+      flex: 1;
+      min-height: 0;
+      padding: 0 12px;
+      overflow-y: auto;
+    }
+
+    .conversation {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 5px;
+      padding: 13px 14px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 15px;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .conversation:hover { background: #edf3ef; }
+    .conversation.active { background: white; box-shadow: 0 4px 18px rgba(31, 66, 52, 0.06); }
+    .conversation.hidden { display: none; }
+
+    .avatar {
+      position: relative;
+      display: grid;
+      flex: 0 0 46px;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      color: #305c4d;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: 0.3px;
+      background: #dceee5;
+      border-radius: 15px;
+    }
+
+    .avatar.large { flex-basis: 44px; width: 44px; height: 44px; border-radius: 14px; }
+    .avatar.peach { color: #8b573e; background: #fae5d6; }
+    .avatar.blue { color: #49688a; background: #e0ecf7; }
+    .avatar.lilac { color: #6e5b8c; background: #eee6f8; }
+
+    .avatar .status-dot {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 12px;
+      height: 12px;
+      background: #35b57f;
+      border: 3px solid white;
+      border-radius: 50%;
+    }
+
+    .conversation-copy { flex: 1; min-width: 0; }
+    .conversation-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .conversation-name { overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .conversation-time { flex-shrink: 0; color: #91a098; font-size: 10px; }
+    .conversation-preview {
+      margin-top: 5px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-search {
+      display: none;
+      padding: 30px 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .local-note {
+      display: flex;
+      gap: 11px;
+      margin: 16px 20px 20px;
+      padding: 15px;
+      background: var(--green-soft);
+      border: 1px solid #d9ece2;
+      border-radius: 15px;
+    }
+
+    .local-note svg { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 1px; color: var(--green); }
+    .local-note strong { display: block; margin-bottom: 4px; font-size: 12px; }
+    .local-note p { margin: 0; color: #698175; font-size: 11px; line-height: 1.5; }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 17px 23px;
+      background: white;
+      border-top: 1px solid var(--line);
+    }
+
+    .profile .avatar { flex-basis: 36px; width: 36px; height: 36px; font-size: 12px; border-radius: 12px; }
+    .profile-name { font-size: 13px; font-weight: 700; }
+    .profile-status { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .profile-icon { margin-left: auto; color: #90a198; }
+
+    .chat {
+      position: relative;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+      background:
+        radial-gradient(circle at 85% 0%, rgba(222, 241, 231, 0.5), transparent 26%),
+        white;
+    }
+
+    .chat-header {
+      display: flex;
+      flex: 0 0 84px;
+      align-items: center;
+      gap: 13px;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .contact-info { flex: 1; min-width: 0; }
+    .contact-name { margin: 0; font-size: 15px; font-weight: 750; }
+    .contact-status { display: flex; align-items: center; gap: 5px; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .contact-status::before { width: 6px; height: 6px; content: ""; background: #35b57f; border-radius: 50%; }
+
+    .icon-button {
+      display: grid;
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      place-items: center;
+      color: #6f8178;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .icon-button:hover { color: var(--green); background: var(--green-soft); }
+    .icon-button svg { width: 19px; height: 19px; }
+    .menu-button { display: none; }
+
+    .messages {
+      flex: 1;
+      min-height: 0;
+      padding: 25px 30px 18px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: #d7e3dc transparent;
+    }
+
+    .day-divider {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin: 6px 0 24px;
+      color: #95a39c;
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+    }
+
+    .day-divider::before, .day-divider::after { flex: 1; height: 1px; content: ""; background: #edf1ee; }
+
+    .message-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 9px;
+      margin-bottom: 14px;
+      animation: message-in 240ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .message-row.sent { justify-content: flex-end; }
+    .message-row .avatar { flex-basis: 29px; width: 29px; height: 29px; margin-bottom: 19px; font-size: 9px; border-radius: 10px; }
+
+    .message-stack { max-width: min(72%, 540px); }
+    .bubble {
+      padding: 12px 15px;
+      color: #334a41;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f1f5f2;
+      border: 1px solid #e7ede9;
+      border-radius: 17px 17px 17px 5px;
+    }
+
+    .sent .bubble {
+      color: white;
+      background: linear-gradient(135deg, #208c6f, #16765d);
+      border-color: transparent;
+      border-radius: 17px 17px 5px 17px;
+      box-shadow: 0 6px 15px rgba(23, 126, 99, 0.12);
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 5px;
+      padding: 0 3px;
+      color: #9aa79f;
+      font-size: 9px;
+    }
+
+    .sent .message-meta { justify-content: flex-end; }
+    .message-meta svg { width: 12px; height: 12px; color: #6aac92; }
+
+    .typing-row { display: flex; align-items: flex-end; gap: 9px; margin: 3px 0 12px; animation: message-in 180ms ease both; }
+    .typing-row .avatar { flex-basis: 29px; width: 29px; height: 29px; margin-bottom: 0; font-size: 9px; border-radius: 10px; }
+    .typing-bubble { display: flex; gap: 4px; padding: 14px 16px; background: #f1f5f2; border: 1px solid #e7ede9; border-radius: 17px 17px 17px 5px; }
+    .typing-bubble span { width: 5px; height: 5px; background: #91a59b; border-radius: 50%; animation: typing 1.1s infinite ease-in-out; }
+    .typing-bubble span:nth-child(2) { animation-delay: 140ms; }
+    .typing-bubble span:nth-child(3) { animation-delay: 280ms; }
+
+    .empty-chat { display: grid; height: 100%; min-height: 220px; place-items: center; text-align: center; }
+    .empty-chat svg { width: 54px; height: 54px; margin-bottom: 13px; color: #80b9a3; }
+    .empty-chat h2 { margin: 0 0 7px; font-size: 17px; }
+    .empty-chat p { max-width: 280px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+    .composer-wrap { position: relative; flex: 0 0 auto; padding: 15px 27px 20px; background: white; border-top: 1px solid var(--line); }
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 7px 8px 7px 10px;
+      background: #f6f8f6;
+      border: 1px solid #e4ebe6;
+      border-radius: 17px;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .composer:focus-within { border-color: #9bcbb9; box-shadow: 0 0 0 4px rgba(23, 126, 99, 0.06); }
+    .emoji-button { flex-basis: 36px; width: 36px; height: 36px; margin-bottom: 1px; }
+    .emoji-button svg { width: 20px; height: 20px; }
+
+    #messageInput {
+      flex: 1;
+      min-width: 0;
+      max-height: 112px;
+      min-height: 38px;
+      padding: 9px 4px 7px;
+      overflow-y: auto;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      background: transparent;
+      border: 0;
+      outline: none;
+    }
+
+    #messageInput::placeholder { color: #98a59e; }
+    .send-button {
+      display: grid;
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      place-items: center;
+      color: white;
+      background: var(--green);
+      border: 0;
+      border-radius: 13px;
+      box-shadow: 0 5px 12px rgba(23, 126, 99, 0.18);
+      transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
+    }
+
+    .send-button:hover:not(:disabled) { background: var(--green-dark); transform: translateY(-1px); }
+    .send-button:active:not(:disabled) { transform: scale(0.96); }
+    .send-button:disabled { cursor: default; opacity: 0.4; box-shadow: none; }
+    .send-button svg { width: 18px; height: 18px; }
+    .composer-hint { margin: 8px 4px 0; color: #9ba8a1; font-size: 9px; text-align: center; }
+
+    .emoji-picker {
+      position: absolute;
+      z-index: 15;
+      bottom: 84px;
+      left: 30px;
+      display: none;
+      gap: 4px;
+      padding: 8px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(31, 66, 52, 0.14);
+      animation: picker-in 150ms ease both;
+    }
+
+    .emoji-picker.open { display: flex; }
+    .emoji-picker button { width: 34px; height: 34px; padding: 0; font-size: 19px; background: transparent; border: 0; border-radius: 9px; }
+    .emoji-picker button:hover { background: var(--green-soft); }
+
+    .sidebar-overlay { display: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    dialog {
+      width: min(380px, calc(100% - 36px));
+      padding: 26px;
+      color: var(--text);
+      background: white;
+      border: 0;
+      border-radius: 20px;
+      box-shadow: 0 24px 70px rgba(20, 53, 40, 0.2);
+    }
+
+    dialog::backdrop { background: rgba(20, 44, 35, 0.3); backdrop-filter: blur(3px); }
+    dialog h2 { margin: 0 0 9px; font-size: 19px; }
+    dialog p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px; }
+    .dialog-actions button { padding: 10px 16px; font-size: 12px; font-weight: 700; border-radius: 10px; }
+    .cancel-button { color: var(--text); background: #f1f5f2; border: 1px solid var(--line); }
+    .clear-button { color: white; background: #b54f48; border: 1px solid #b54f48; }
+    .primary-button { color: white; background: var(--green); border: 1px solid var(--green); }
+    .primary-button:hover { background: var(--green-dark); }
+    .field-label { display: block; margin: 20px 0 7px; font-size: 12px; font-weight: 700; }
+    .contact-field {
+      width: 100%;
+      height: 44px;
+      padding: 0 13px;
+      color: var(--text);
+      background: #f6f8f6;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+    }
+    .contact-field:focus { border-color: #8ac8b2; box-shadow: 0 0 0 4px rgba(23, 126, 99, 0.07); outline: none; }
+    .field-error { min-height: 17px; margin: 6px 0 0; color: #b54f48; font-size: 11px; }
+
+    @keyframes message-in {
+      from { opacity: 0; transform: translateY(8px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.45; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-3px); }
+    }
+
+    @keyframes picker-in {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 800px) {
+      .app { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+      .sidebar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: min(86vw, 340px);
+        transform: translateX(-102%);
+        transition: transform 220ms ease;
+        box-shadow: 15px 0 45px rgba(31, 66, 52, 0.12);
+      }
+      .app.sidebar-open .sidebar { transform: translateX(0); }
+      .app.sidebar-open .sidebar-overlay {
+        position: absolute;
+        z-index: 10;
+        inset: 0;
+        display: block;
+        background: rgba(22, 47, 37, 0.24);
+        backdrop-filter: blur(2px);
+      }
+      .menu-button { display: grid; }
+      .chat-header { padding: 0 15px; }
+      .messages { padding: 22px 18px 14px; }
+      .message-stack { max-width: 82%; }
+      .composer-wrap { padding: 12px 14px 14px; }
+      .composer-hint { display: none; }
+      .emoji-picker { bottom: 76px; left: 17px; }
+    }
+
+    @media (max-width: 420px) {
+      .chat-header { flex-basis: 74px; gap: 9px; }
+      .chat-header .avatar { flex-basis: 38px; width: 38px; height: 38px; border-radius: 12px; }
+      .contact-name { font-size: 14px; }
+      .message-stack { max-width: 86%; }
+      .bubble { padding: 11px 13px; font-size: 12px; }
+      .emoji-picker { gap: 0; }
+      .emoji-picker button { width: 31px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar" aria-label="Conversations">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.5 9.5 0 0 1-4-.9L3 21l1.8-4.5A8.4 8.4 0 1 1 21 11.5Z"/>
+            <path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01"/>
+          </svg>
+        </div>
+        <span class="brand-name">ripple</span>
+        <span class="brand-tag">CHAT</span>
+      </div>
+
+      <div class="sidebar-heading">
+        <h1>Messages</h1>
+        <div class="sidebar-actions">
+          <span class="count-badge" id="conversationCount">3</span>
+          <button class="new-chat-button" id="newChatButton" type="button" aria-label="Start a new chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>New chat</span>
+          </button>
+        </div>
+      </div>
+
+      <label class="search-box">
+        <span class="sr-only">Search conversations</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search conversations" autocomplete="off">
+      </label>
+
+      <div class="conversation-list" id="conversationList"></div>
+      <p class="empty-search" id="emptySearch">No conversations found.</p>
+
+      <div class="local-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3 4 6v5c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10V6l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/>
+        </svg>
+        <div>
+          <strong>Saved on this device</strong>
+          <p>Your chat history stays in localStorage, even after a refresh.</p>
+        </div>
+      </div>
+
+      <div class="profile">
+        <div class="avatar lilac">YO</div>
+        <div>
+          <div class="profile-name">You</div>
+          <div class="profile-status">Available to chat</div>
+        </div>
+        <svg class="profile-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8a1.7 1.7 0 0 1-1.9.3 1.7 1.7 0 0 1-1 .3H10a1.7 1.7 0 0 1-1.7-1.7V15a1.7 1.7 0 0 1 .3-1l-2.8-2.8a1.7 1.7 0 0 1 .3-1.9A1.7 1.7 0 0 1 8 8.3l1.9-.3A1.7 1.7 0 0 1 11 7V5a1.7 1.7 0 0 1 1.7-1.7H15a1.7 1.7 0 0 1 1.7 1.7v2a1.7 1.7 0 0 1-.3 1l1.9.3a1.7 1.7 0 0 1 1.1 2.6Z"/>
+        </svg>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="chat">
+      <header class="chat-header">
+        <button class="icon-button menu-button" id="menuButton" aria-label="Open conversations" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="avatar large" id="contactAvatar">MC<span class="status-dot"></span></div>
+        <div class="contact-info">
+          <h2 class="contact-name" id="contactName">Maya Chen</h2>
+          <div class="contact-status" id="contactStatus">Online · usually replies quickly</div>
+        </div>
+        <button class="icon-button" id="clearButton" aria-label="Clear this conversation" title="Clear conversation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/></svg>
+        </button>
+      </header>
+
+      <section class="messages" id="messages" aria-label="Chat messages" aria-live="polite"></section>
+
+      <div class="emoji-picker" id="emojiPicker" aria-label="Choose an emoji">
+        <button type="button" aria-label="Smile">😊</button>
+        <button type="button" aria-label="Laugh">😂</button>
+        <button type="button" aria-label="Love">❤️</button>
+        <button type="button" aria-label="Thumbs up">👍</button>
+        <button type="button" aria-label="Celebrate">🎉</button>
+        <button type="button" aria-label="Wave">👋</button>
+      </div>
+
+      <div class="composer-wrap">
+        <form class="composer" id="messageForm">
+          <button class="icon-button emoji-button" id="emojiButton" type="button" aria-label="Add emoji" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M8.5 9h.01M15.5 9h.01"/></svg>
+          </button>
+          <label class="sr-only" for="messageInput">Message</label>
+          <textarea id="messageInput" rows="1" placeholder="Write a message..." maxlength="2000"></textarea>
+          <button class="send-button" id="sendButton" type="submit" aria-label="Send message" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>
+          </button>
+        </form>
+        <p class="composer-hint">Press Enter to send · Shift + Enter for a new line</p>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="clearDialog">
+    <h2>Clear this conversation?</h2>
+    <p>This removes the saved messages for this chat from your device. This action cannot be undone.</p>
+    <div class="dialog-actions">
+      <button class="cancel-button" id="cancelClear" type="button">Cancel</button>
+      <button class="clear-button" id="confirmClear" type="button">Clear chat</button>
+    </div>
+  </dialog>
+
+  <dialog id="newChatDialog">
+    <form id="newChatForm" novalidate>
+      <h2>Start a new chat</h2>
+      <p>Enter any name to create a local demo conversation. Replies are simulated automatically.</p>
+      <label class="field-label" for="newContactName">Person's name</label>
+      <input class="contact-field" id="newContactName" type="text" placeholder="e.g. Sam Wilson" maxlength="40" autocomplete="off" aria-describedby="contactNameError">
+      <p class="field-error" id="contactNameError" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="cancel-button" id="cancelNewChat" type="button">Cancel</button>
+        <button class="primary-button" type="submit">Start chat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const STORAGE_KEY = "ripple-chat-v1";
+    const CONTACTS_STORAGE_KEY = "ripple-contacts-v1";
+    const avatarColors = ["", "peach", "blue", "lilac"];
+    const defaultContacts = [
+      { id: "maya", name: "Maya Chen", initials: "MC", color: "", status: "Online · usually replies quickly", preview: "That sounds perfect!", offset: -7 },
+      { id: "alex", name: "Alex Morgan", initials: "AM", color: "peach", status: "Online · available now", preview: "See you at the workshop.", offset: -48 },
+      { id: "team", name: "Design Crew", initials: "DC", color: "blue", status: "3 members · active now", preview: "The new concepts look great.", offset: -130 }
+    ];
+    const contacts = [...defaultContacts, ...loadContacts()];
+
+    const genericReplies = [
+      "Hey! Great to hear from you.",
+      "Sounds good — thanks for the message!",
+      "I'm here. What would you like to chat about?",
+      "Got it! Let's keep the conversation going.",
+      "Nice! Thanks for reaching out."
+    ];
+
+    const replies = {
+      maya: [
+        "That sounds perfect! Let's do it.",
+        "Love that idea — I'm in!",
+        "Got it, thanks for the update!",
+        "Absolutely. I'll take a look and get back to you.",
+        "You read my mind. That works for me!"
+      ],
+      alex: [
+        "Sounds good to me!",
+        "Nice — talk soon!",
+        "I'm on it. Thanks for the heads-up!",
+        "Perfect timing. Let's catch up later.",
+        "Great idea. Count me in!"
+      ],
+      team: [
+        "Thanks for sharing this with everyone!",
+        "Love the direction this is going.",
+        "Noted — we'll add it to the list.",
+        "Looks good from our side!",
+        "Let's discuss it in our next check-in."
+      ]
+    };
+
+    const app = document.getElementById("app");
+    const conversationList = document.getElementById("conversationList");
+    const conversationCount = document.getElementById("conversationCount");
+    const searchInput = document.getElementById("searchInput");
+    const emptySearch = document.getElementById("emptySearch");
+    const messagesEl = document.getElementById("messages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const contactAvatar = document.getElementById("contactAvatar");
+    const contactName = document.getElementById("contactName");
+    const contactStatus = document.getElementById("contactStatus");
+    const emojiButton = document.getElementById("emojiButton");
+    const emojiPicker = document.getElementById("emojiPicker");
+    const menuButton = document.getElementById("menuButton");
+    const sidebarOverlay = document.getElementById("sidebarOverlay");
+    const clearDialog = document.getElementById("clearDialog");
+    const newChatButton = document.getElementById("newChatButton");
+    const newChatDialog = document.getElementById("newChatDialog");
+    const newChatForm = document.getElementById("newChatForm");
+    const newContactName = document.getElementById("newContactName");
+    const contactNameError = document.getElementById("contactNameError");
+    const cancelNewChat = document.getElementById("cancelNewChat");
+    const typingContacts = new Set();
+    const replyTimers = new Map();
+    const replyCounters = {};
+    let activeContactId = "maya";
+    let histories = loadHistories();
+
+    function timeAgo(minutes) {
+      return new Date(Date.now() + minutes * 60000).toISOString();
+    }
+
+    function createSeedHistories() {
+      return {
+        maya: [
+          { id: "maya-1", sender: "received", text: "Hey! How's the new chat interface coming along?", time: timeAgo(-42) },
+          { id: "maya-2", sender: "sent", text: "Really well! I'm adding the finishing touches now.", time: timeAgo(-40), status: "read" },
+          { id: "maya-3", sender: "received", text: "Nice! Make sure the messages stay saved after refreshing.", time: timeAgo(-38) },
+          { id: "maya-4", sender: "sent", text: "Already handled with localStorage. Want to give it a try?", time: timeAgo(-9), status: "read" },
+          { id: "maya-5", sender: "received", text: "That sounds perfect!", time: timeAgo(-7) }
+        ],
+        alex: [
+          { id: "alex-1", sender: "received", text: "Are we still on for the design workshop tomorrow?", time: timeAgo(-54) },
+          { id: "alex-2", sender: "sent", text: "Yep! I'll bring the latest mockups.", time: timeAgo(-51), status: "read" },
+          { id: "alex-3", sender: "received", text: "See you at the workshop.", time: timeAgo(-48) }
+        ],
+        team: [
+          { id: "team-1", sender: "sent", text: "I've uploaded the updated chat flow for review.", time: timeAgo(-136), status: "read" },
+          { id: "team-2", sender: "received", text: "The new concepts look great.", time: timeAgo(-130) }
+        ]
+      };
+    }
+
+    function loadContacts() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CONTACTS_STORAGE_KEY) || "[]");
+        if (!Array.isArray(saved)) return [];
+        return saved
+          .filter(contact => contact && contact.custom === true && typeof contact.id === "string" && contact.id.startsWith("custom-") && typeof contact.name === "string" && contact.name.trim())
+          .map(contact => ({
+            id: contact.id,
+            name: contact.name.trim().slice(0, 40),
+            initials: getInitials(contact.name.trim().slice(0, 40)),
+            color: avatarColors.includes(contact.color) ? contact.color : "",
+            status: "Demo contact · replies automatically",
+            custom: true
+          }));
+      } catch (error) {
+        console.warn("Could not load saved contacts.", error);
+        return [];
+      }
+    }
+
+    function saveCustomContacts() {
+      try {
+        localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(contacts.filter(contact => contact.custom)));
+      } catch (error) {
+        console.warn("Could not save contacts.", error);
+      }
+    }
+
+    function getInitials(name) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      return name.trim().slice(0, 2).toUpperCase();
+    }
+
+    function loadHistories() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const valid = contacts.every(contact => Array.isArray(parsed[contact.id]));
+          if (valid) return parsed;
+        }
+      } catch (error) {
+        console.warn("Could not load saved chats.", error);
+      }
+      const seeded = createSeedHistories();
+      contacts.forEach(contact => {
+        if (!Array.isArray(seeded[contact.id])) seeded[contact.id] = [];
+      });
+      saveHistories(seeded);
+      return seeded;
+    }
+
+    function saveHistories(data = histories) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (error) {
+        console.warn("Could not save chats.", error);
+      }
+    }
+
+    function getActiveContact() {
+      return contacts.find(contact => contact.id === activeContactId);
+    }
+
+    function formatTime(value) {
+      return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+    }
+
+    function formatDay(value) {
+      const date = new Date(value);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      if (date.toDateString() === today.toDateString()) return "Today";
+      if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+      return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+    }
+
+    function formatSidebarTime(value) {
+      const date = new Date(value);
+      const today = new Date();
+      if (date.toDateString() === today.toDateString()) return formatTime(value);
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+      return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+    }
+
+    function makeId(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function renderConversations() {
+      conversationList.replaceChildren();
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      contacts.forEach(contact => {
+        if (!contact.name.toLowerCase().includes(query)) return;
+        visibleCount += 1;
+        const history = histories[contact.id];
+        const lastMessage = history[history.length - 1];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `conversation${contact.id === activeContactId ? " active" : ""}`;
+        button.dataset.contactId = contact.id;
+        button.setAttribute("aria-label", `Open conversation with ${contact.name}`);
+        if (contact.id === activeContactId) button.setAttribute("aria-current", "page");
+
+        const avatar = document.createElement("div");
+        avatar.className = `avatar ${contact.color}`;
+        avatar.textContent = contact.initials;
+        if (contact.id !== "team") {
+          const dot = document.createElement("span");
+          dot.className = "status-dot";
+          avatar.appendChild(dot);
+        }
+
+        const copy = document.createElement("div");
+        copy.className = "conversation-copy";
+        const top = document.createElement("div");
+        top.className = "conversation-top";
+        const name = document.createElement("span");
+        name.className = "conversation-name";
+        name.textContent = contact.name;
+        const time = document.createElement("span");
+        time.className = "conversation-time";
+        time.textContent = lastMessage ? formatSidebarTime(lastMessage.time) : "";
+        top.append(name, time);
+
+        const preview = document.createElement("div");
+        preview.className = "conversation-preview";
+        preview.textContent = lastMessage
+          ? `${lastMessage.sender === "sent" ? "You: " : ""}${lastMessage.text}`
+          : "Start a conversation";
+        copy.append(top, preview);
+        button.append(avatar, copy);
+        button.addEventListener("click", () => selectContact(contact.id));
+        conversationList.appendChild(button);
+      });
+
+      conversationCount.textContent = visibleCount;
+      emptySearch.style.display = visibleCount ? "none" : "block";
+    }
+
+    function renderHeader() {
+      const contact = getActiveContact();
+      contactAvatar.className = `avatar large ${contact.color}`;
+      contactAvatar.replaceChildren(document.createTextNode(contact.initials));
+      if (contact.id !== "team") {
+        const dot = document.createElement("span");
+        dot.className = "status-dot";
+        contactAvatar.appendChild(dot);
+      }
+      contactName.textContent = contact.name;
+      contactStatus.textContent = contact.status;
+    }
+
+    function createDayDivider(label) {
+      const divider = document.createElement("div");
+      divider.className = "day-divider";
+      divider.textContent = label;
+      return divider;
+    }
+
+    function createMessageElement(message, contact) {
+      const row = document.createElement("div");
+      row.className = `message-row ${message.sender}`;
+      row.dataset.messageId = message.id;
+
+      if (message.sender === "received") {
+        const avatar = document.createElement("div");
+        avatar.className = `avatar ${contact.color}`;
+        avatar.textContent = contact.initials;
+        avatar.setAttribute("aria-hidden", "true");
+        row.appendChild(avatar);
+      }
+
+      const stack = document.createElement("div");
+      stack.className = "message-stack";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = message.text;
+      const meta = document.createElement("div");
+      meta.className = "message-meta";
+      const time = document.createElement("span");
+      time.textContent = formatTime(message.time);
+      meta.appendChild(time);
+
+      if (message.sender === "sent") {
+        const status = document.createElement("span");
+        status.textContent = message.status === "read" ? "Read" : "Sent";
+        const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        check.setAttribute("viewBox", "0 0 24 24");
+        check.setAttribute("fill", "none");
+        check.setAttribute("stroke", "currentColor");
+        check.setAttribute("stroke-width", "2");
+        check.setAttribute("stroke-linecap", "round");
+        check.setAttribute("stroke-linejoin", "round");
+        check.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "m3 12 4 4L17 6M11 16l2 2L22 9");
+        check.appendChild(path);
+        meta.append(status, check);
+      }
+
+      stack.append(bubble, meta);
+      row.appendChild(stack);
+      return row;
+    }
+
+    function createTypingElement(contact) {
+      const row = document.createElement("div");
+      row.className = "typing-row";
+      row.setAttribute("aria-label", `${contact.name} is typing`);
+      const avatar = document.createElement("div");
+      avatar.className = `avatar ${contact.color}`;
+      avatar.textContent = contact.initials;
+      avatar.setAttribute("aria-hidden", "true");
+      const bubble = document.createElement("div");
+      bubble.className = "typing-bubble";
+      bubble.setAttribute("aria-hidden", "true");
+      for (let i = 0; i < 3; i += 1) bubble.appendChild(document.createElement("span"));
+      row.append(avatar, bubble);
+      return row;
+    }
+
+    function renderMessages(smooth = true) {
+      const contact = getActiveContact();
+      const history = histories[contact.id];
+      messagesEl.replaceChildren();
+
+      if (!history.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-chat";
+        const content = document.createElement("div");
+        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        icon.setAttribute("viewBox", "0 0 64 64");
+        icon.setAttribute("fill", "none");
+        icon.setAttribute("stroke", "currentColor");
+        icon.setAttribute("stroke-width", "2.5");
+        icon.setAttribute("stroke-linecap", "round");
+        icon.setAttribute("stroke-linejoin", "round");
+        icon.setAttribute("aria-hidden", "true");
+        const iconPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        iconPath.setAttribute("d", "M53 28a20 20 0 0 1-22 20 23 23 0 0 1-9-2L10 53l6-12a20 20 0 1 1 37-13Z");
+        icon.appendChild(iconPath);
+        const heading = document.createElement("h2");
+        heading.textContent = `Say hello to ${contact.name.split(" ")[0]}`;
+        const paragraph = document.createElement("p");
+        paragraph.textContent = "This is the start of your conversation. Send a message to get things moving.";
+        content.append(icon, heading, paragraph);
+        empty.appendChild(content);
+        messagesEl.appendChild(empty);
+        return;
+      }
+
+      let previousDay = "";
+      history.forEach(message => {
+        const day = formatDay(message.time);
+        if (day !== previousDay) {
+          messagesEl.appendChild(createDayDivider(day));
+          previousDay = day;
+        }
+        messagesEl.appendChild(createMessageElement(message, contact));
+      });
+
+      if (typingContacts.has(contact.id)) messagesEl.appendChild(createTypingElement(contact));
+      requestAnimationFrame(() => scrollToBottom(smooth));
+    }
+
+    function scrollToBottom(smooth = true) {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      messagesEl.scrollTo({
+        top: messagesEl.scrollHeight,
+        behavior: smooth && !reduceMotion ? "smooth" : "instant"
+      });
+    }
+
+    function selectContact(id) {
+      activeContactId = id;
+      renderHeader();
+      renderConversations();
+      renderMessages(false);
+      closeSidebar();
+      messageInput.value = "";
+      resizeInput();
+      updateSendButton();
+      messageInput.focus();
+    }
+
+    function closeSidebar() {
+      app.classList.remove("sidebar-open");
+      menuButton.setAttribute("aria-expanded", "false");
+    }
+
+    function updateSendButton() {
+      sendButton.disabled = !messageInput.value.trim();
+    }
+
+    function resizeInput() {
+      messageInput.style.height = "auto";
+      messageInput.style.height = `${Math.min(messageInput.scrollHeight, 112)}px`;
+    }
+
+    function queueReply(contactId) {
+      const contact = contacts.find(item => item.id === contactId);
+      typingContacts.add(contactId);
+      if (contactId === activeContactId) renderMessages();
+
+      const timers = replyTimers.get(contactId) || new Set();
+      replyTimers.set(contactId, timers);
+      const timer = window.setTimeout(() => {
+        timers.delete(timer);
+        if (!timers.size) replyTimers.delete(contactId);
+        const count = replyCounters[contactId] || 0;
+        const options = replies[contactId] || genericReplies;
+        const text = options[count % options.length];
+        replyCounters[contactId] = count + 1;
+        typingContacts.delete(contactId);
+
+        const pendingMessage = histories[contactId].find(message => message.sender === "sent" && message.status !== "read");
+        if (pendingMessage) pendingMessage.status = "read";
+        histories[contactId].push({
+          id: makeId("reply"),
+          sender: "received",
+          text,
+          time: new Date().toISOString()
+        });
+        saveHistories();
+        renderConversations();
+        if (contactId === activeContactId) renderMessages();
+      }, 1100 + Math.floor(Math.random() * 700));
+      timers.add(timer);
+    }
+
+    messageForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const contactId = activeContactId;
+      histories[contactId].push({
+        id: makeId("message"),
+        sender: "sent",
+        text,
+        time: new Date().toISOString(),
+        status: "sent"
+      });
+      saveHistories();
+      messageInput.value = "";
+      resizeInput();
+      updateSendButton();
+      emojiPicker.classList.remove("open");
+      emojiButton.setAttribute("aria-expanded", "false");
+      renderConversations();
+      renderMessages();
+      queueReply(contactId);
+      messageInput.focus();
+    });
+
+    messageInput.addEventListener("input", () => {
+      resizeInput();
+      updateSendButton();
+    });
+
+    messageInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        messageForm.requestSubmit();
+      }
+    });
+
+    searchInput.addEventListener("input", renderConversations);
+
+    emojiButton.addEventListener("click", () => {
+      const isOpen = emojiPicker.classList.toggle("open");
+      emojiButton.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    emojiPicker.addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      messageInput.value += button.textContent;
+      resizeInput();
+      updateSendButton();
+      emojiPicker.classList.remove("open");
+      emojiButton.setAttribute("aria-expanded", "false");
+      messageInput.focus();
+    });
+
+    document.addEventListener("click", event => {
+      if (!emojiPicker.contains(event.target) && !emojiButton.contains(event.target)) {
+        emojiPicker.classList.remove("open");
+        emojiButton.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    menuButton.addEventListener("click", () => {
+      const isOpen = app.classList.toggle("sidebar-open");
+      menuButton.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    sidebarOverlay.addEventListener("click", closeSidebar);
+
+    newChatButton.addEventListener("click", () => {
+      newContactName.value = "";
+      contactNameError.textContent = "";
+      newContactName.removeAttribute("aria-invalid");
+      newChatDialog.showModal();
+      requestAnimationFrame(() => newContactName.focus());
+    });
+
+    cancelNewChat.addEventListener("click", () => newChatDialog.close());
+
+    newContactName.addEventListener("input", () => {
+      contactNameError.textContent = "";
+      newContactName.removeAttribute("aria-invalid");
+    });
+
+    newChatForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const name = newContactName.value.trim().replace(/\s+/g, " ");
+      if (!name) {
+        contactNameError.textContent = "Please enter a name.";
+        newContactName.setAttribute("aria-invalid", "true");
+        newContactName.focus();
+        return;
+      }
+
+      const existing = contacts.find(contact => contact.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+      if (existing) {
+        newChatDialog.close();
+        searchInput.value = "";
+        selectContact(existing.id);
+        return;
+      }
+
+      const contact = {
+        id: makeId("custom"),
+        name,
+        initials: getInitials(name),
+        color: avatarColors[contacts.length % avatarColors.length],
+        status: "Demo contact · replies automatically",
+        custom: true
+      };
+      contacts.push(contact);
+      histories[contact.id] = [];
+      saveCustomContacts();
+      saveHistories();
+      newChatDialog.close();
+      searchInput.value = "";
+      selectContact(contact.id);
+    });
+
+    document.getElementById("clearButton").addEventListener("click", () => clearDialog.showModal());
+    document.getElementById("cancelClear").addEventListener("click", () => clearDialog.close());
+    document.getElementById("confirmClear").addEventListener("click", () => {
+      const timers = replyTimers.get(activeContactId);
+      if (timers) timers.forEach(timer => window.clearTimeout(timer));
+      replyTimers.delete(activeContactId);
+      histories[activeContactId] = [];
+      typingContacts.delete(activeContactId);
+      saveHistories();
+      renderConversations();
+      renderMessages(false);
+      clearDialog.close();
+      messageInput.focus();
+    });
+
+    renderHeader();
+    renderConversations();
+    renderMessages(false);
+    updateSendButton();
+  </script>
+</body>
+</html>
